@@ -33,11 +33,11 @@ Usage of ./cert-manager:
 ```
 Examples:
 ```sh
-$ ./cert-manager -option=show -loadbalancer=h1sta01-v00.devops.int.ovp.bskyb.com -name=i2.np.ovp.sky.com
+$ ./cert-manager -option=show -loadbalancer=example-vtm-node-01.com -name=example.cert.com
 ```
 ```sh
-$ ./cert-manager -option=add -loadbalancer=h1sta01-v00.devops.stg2.ovp.bskyb.com -name=ovp.bskyb.com -cert=/path/to/cert -key=/path/to/key
+$ ./cert-manager -option=add -loadbalancer=example-vtm-node-01.com -name=example.cert.com -cert=/path/to/cert -key=/path/to/key
 ```
 ```sh
-$ ./cert-manager -option=delete -loadbalancer=h1sta01-v00.devops.int.ovp.bskyb.com -name=ben.test.com
+$ ./cert-manager -option=delete -loadbalancer=example-vtm-node-01.com -name=example.cert.com
 ```
