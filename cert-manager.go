@@ -2,165 +2,17 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	"crypto/tls"
-	"log"
-	"io/ioutil"
-	"bytes"
 	"flag"
-	"golang.org/x/crypto/ssh/terminal"
 	"bufio"
 	"os"
+	"golang.org/x/crypto/ssh/terminal"
 	"syscall"
+	"log"
 	"strings"
+	"github.com/bennyg93/brocade-certificates"
 )
 
-func showCert(url, cert string) string {
-	// getting username and password from user input
-	username, password := credentials()
-
-	// Building the URL using the username, pass, LB url
-	urlBuild := fmt.Sprintf("https://%s:%s@%s:9070/api/tm/3.8/config/active/ssl/server_keys/%s/", username, password, url, cert)
-
-	// Bypassing secure connection
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify : true},
-	}
-	client := &http.Client{Transport: tr}
-
-	// Building the request using the URL build above
-	request, err := http.NewRequest("GET", urlBuild, nil)
-
-	// Returning the request and catching end errors
-	response, err := client.Do(request)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Putting whole response in string
-	bodyText, err := ioutil.ReadAll(response.Body)
-
-	// Returning the response status and body
-	fmt.Println("response Status", response.Status)
-	s := string(bodyText)
-	fmt.Println(s)
-	return s
-}
-
-func showCertAll(url string) string {
-	// getting username and password from user input
-	username, password := credentials()
-
-	// Building the URL using the username, pass, LB url
-	urlBuild := fmt.Sprintf("https://%s:%s@%s:9070/api/tm/3.8/config/active/ssl/server_keys/", username, password, url)
-
-	// Bypassing secure connection
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify : true},
-	}
-	client := &http.Client{Transport: tr}
-
-	// Building the request using the URL build above
-	request, err := http.NewRequest("GET", urlBuild, nil)
-
-	// Returning the request and catching end errors
-	response, err := client.Do(request)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Putting whole response in string
-	bodyText, err := ioutil.ReadAll(response.Body)
-
-	// Returning the response status and body
-	fmt.Println("response Status", response.Status)
-	s := string(bodyText)
-	fmt.Println(s)
-	return s
-}
-
-func addCert(url, cert, cert_path, key_path string) string {
-	// getting the contents of each file to build JSON pay load
-	certificate := readFile(cert_path)
-	privatekey := readFile(key_path)
-
-	data := []byte(`{"properties":{"basic":{"note":"","private":"`+ privatekey +`","public":"`+ certificate +`"}}}`)
-
-	// getting username and password from user input
-	username, password := credentials()
-
-	// Building the URL using the username, pass, LB url
-	urlBuild := fmt.Sprintf("https://%s:%s@%s:9070/api/tm/3.8/config/active/ssl/server_keys/%s/", username, password, url, cert)
-
-	// Bypassing secure connection
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify : true},
-	}
-	client := &http.Client{Transport: tr}
-
-	// Building the request using the URL build above
-	request, err := http.NewRequest("PUT", urlBuild, bytes.NewBuffer(data))
-	request.Header.Set("Content-Type", "application/json")
-
-	// Returning the request and catching end errors
-	response, err := client.Do(request)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Putting whole response in string
-	bodyText, err := ioutil.ReadAll(response.Body)
-
-	// Returning the response status and body
-	fmt.Println("response Status", response.Status)
-	s := string(bodyText)
-	fmt.Println(s)
-	return s
-}
-
-func delCert(url, cert string) string {
-	// getting username and password from user input
-	username, password := credentials()
-
-	// Building the URL using the username, pass, LB url
-	urlBuild := fmt.Sprintf("https://%s:%s@%s:9070/api/tm/3.8/config/active/ssl/server_keys/%s/", username, password, url, cert)
-
-	// Bypassing secure connection
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify : true},
-	}
-	client := &http.Client{Transport: tr}
-
-	// Building the request using the URL build above
-	request, err := http.NewRequest("DELETE", urlBuild, nil)
-
-	// Returning the request and catching end errors
-	response, err := client.Do(request)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Putting whole response in string
-	bodyText, err := ioutil.ReadAll(response.Body)
-
-	// Returning the response status and body
-	fmt.Println("response Status", response.Status)
-	s := string(bodyText)
-	fmt.Println(s)
-	return s
-}
-
-func readFile(path string) string {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	cert := string(data)
-	//fmt.Println(cert)
-	return cert
-}
-
-func credentials() (string, string) {
+func Credentials() (string, string) {
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Print("Enter Username: ")
@@ -183,43 +35,52 @@ func main() {
 	NAME := flag.String("name", "", "The name of the certificate")
 	CERTIFICATE := flag.String("cert", "", "Path to the certificate file")
 	PRIVATEKEY := flag.String("key", "", "Path to the private key")
+	API := flag.String("api", "3.8", "Brocade VTM API version number")
 
 	flag.Parse()
 
 	if *OPTION == "" || *LOADBALANCER == "" || *NAME == "" {
 		fmt.Println("Flags 'option', 'loadbalancer' and 'name' require values")
-		fmt.Println("Example: cert-manager.go -option=show -loadbalancer=example-vtm-node-01.com -name=example.cert.com")
+		fmt.Println("Example: brocade.go -option=show -loadbalancer=h1sta01-v00.devops.stg2.ovp.bskyb.com -name=ovp.bskyb.com")
 	} else {
 		switch *OPTION {
-			case "show":
+		case "show":
 
-				if *NAME == "all" {
-					// Showing all certs on LB
-					fmt.Println("Showing all Certs")
-					showCertAll(*LOADBALANCER)
-				} else {
-					// Showing specified cert
-					showCert(*LOADBALANCER, *NAME)
-				}
-
-			case "add":
-				if *CERTIFICATE == "" {
-					fmt.Println("Flags 'cert' and 'key' require values when adding a new cert")
-					fmt.Println("Example: cert-manager.go -option=add -loadbalancer=example-vtm-node-01.com -name=example.cert.com -cert=/path/to/cert -key=/path/to/key")
-				} else {
-					// Adding a specified certificate
-					fmt.Println("Add Cert")
-					addCert(*LOADBALANCER, *NAME, *CERTIFICATE, *PRIVATEKEY)
-				}
-
-			case "delete":
-				// Deleting a specified certificate
-				fmt.Println("Deleting Cert")
-				delCert(*LOADBALANCER, *NAME)
-
-			default:
-				// Default message if user does not specify an option
-				fmt.Println("Please specify option 'show' or 'add' or 'delete'.")
+			if *NAME == "all" {
+				// getting username and password from user input
+				username, password := Credentials()
+				// Showing all certs on LB
+				fmt.Println("Showing all Certs")
+				brocade.Showall(*LOADBALANCER, username, password, *API)
+			} else {
+				// getting username and password from user input
+				username, password := Credentials()
+				// Showing specified cert
+				brocade.Showcert(*LOADBALANCER, *NAME, username, password, *API)
 			}
+
+		case "add":
+			if *CERTIFICATE == "" {
+				fmt.Println("Flags 'cert' and 'key' require values when adding a new cert")
+				fmt.Println("Example: brocade.go -option=add -loadbalancer=h1sta01-v00.devops.stg2.ovp.bskyb.com -name=ovp.bskyb.com -cert=/path/to/cert -key=/path/to/key")
+			} else {
+				// getting username and password from user input
+				username, password := Credentials()
+				// Adding a specified certificate
+				fmt.Println("Add Cert")
+				brocade.Addcert(*LOADBALANCER, *NAME, *CERTIFICATE, *PRIVATEKEY, username, password, *API)
+			}
+
+		case "delete":
+			// getting username and password from user input
+			username, password := Credentials()
+			// Deleting a specified certificate
+			fmt.Println("Deleting Cert")
+			brocade.Delcert(*LOADBALANCER, *NAME, username, password, *API)
+
+		default:
+			// Default message if user does not specify an option
+			fmt.Println("Please specify option 'show' or 'add' or 'delete'.")
+		}
 	}
 }
