@@ -20,16 +20,18 @@ $ go build cert-manager.go
 ```sh
 $ ./cert-manager -h
 Usage of ./cert-manager:
+  -api string
+        Brocade VTM API version number (default "3.8")
   -cert string
-    	Path to the certificate file
+        Path to the certificate file
   -key string
-    	Path to the private key
+        Path to the private key
   -loadbalancer string
-    	Enter the URL for the Load Balancer
+        Enter the URL for the Load Balancer
   -name string
-    	The name of the certificate
+        The name of the certificate
   -option string
-    	Command option. 'show' 'add' 'delete'
+        Command option. 'show' 'add' 'delete'
 ```
 Examples:
 ```sh
